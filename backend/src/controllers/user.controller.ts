@@ -32,7 +32,7 @@ export const signin = async (req: Request, res: Response) => {
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-  const token = jwt.sign({ id: user._id }, 'supersecretkey123', { expiresIn: '7d' });
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
   res.json({ token });
   } catch (err) {
     res.status(500).json({ error: 'Signin failed', details: err });
@@ -46,11 +46,19 @@ export const selectPlan = async (req: Request, res: Response) => {
     const plan = await Plan.findById(planId);
     if (!plan) return res.status(404).json({ error: 'Plan not found' });
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { selectedPlan: planId, progress: { daysCompleted: 0, dailyLogs: [] } },
-      { new: true }
-    );
+    const user = await User.findById(userId);
+
+    // Check if plan is already selected
+    if (user.selectedPlans.some((p: any) => p.plan.toString() === planId)) {
+      return res.status(400).json({ error: 'Plan already selected' });
+    }
+
+    user.selectedPlans.push({
+      plan: planId,
+      progress: { daysCompleted: 0, dailyLogs: [] },
+    });
+
+    await user.save();
 
     res.json({ message: 'Plan selected', plan: plan.name });
   } catch (err) {
@@ -58,24 +66,68 @@ export const selectPlan = async (req: Request, res: Response) => {
   }
 };
 
+export const getUserDetails = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId)
+      .select('-password')
+      .populate('selectedPlans.plan'); // <-- populate here!
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get user details', details: err.message });
+  }
+};
+
 export const logExercise = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
-    console.log(req)
-    const { date, exercisesDone } = req.body;
+    const { planId, date, exerciseId } = req.body;
 
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate('selectedPlans.plan');
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Add new log
-    user.progress.dailyLogs.push({ date, exercisesDone });
-    user.progress.daysCompleted += 1;
+    const selectedPlanObj = user.selectedPlans.find((p: any) => p.plan._id.toString() === planId);
+    if (!selectedPlanObj) return res.status(400).json({ error: 'Plan not selected' });
+
+    const plan = selectedPlanObj.plan as any;
+    const exercise = plan.exercises.find((ex: any) => ex._id.toString() === exerciseId);
+    if (!exercise) return res.status(404).json({ error: 'Exercise not found in plan' });
+
+    selectedPlanObj.progress.dailyLogs.push({
+      date,
+      exercise: {
+        id: exercise._id,
+        name: exercise.name,
+        duration: exercise.duration,
+        intensity: exercise.intensity,
+      },
+    });
 
     await user.save();
 
-    res.json({ message: 'Exercise logged successfully' });
+    res.json({ message: 'Exercise logged successfully', exercise: exercise.name });
   } catch (err) {
     res.status(500).json({ error: 'Failed to log exercise', details: err.message });
+  }
+};
+
+export const getMySelectedPlans = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+   const user = await User.findById(userId).select('-password').populate('selectedPlans.plan');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    res.json({
+      userId: user._id,
+      username: user.username,
+      selectedPlans: user.selectedPlans.map((p: any) => ({
+        plan: p.plan,
+        progress: p.progress,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch selected plans', details: err.message });
   }
 };
 

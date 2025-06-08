@@ -14,7 +14,7 @@ function PrivateRoute({ children }: { children: React.ReactElement }) {
 
 function PublicRoute({ children }: { children: React.ReactElement }) {
   const { token } = useContext(AuthContext);
-  return token ? <Navigate to="/home" /> : children;
+  return token ? <Navigate to="/plans" /> : children;
 }
 
 function AppRoutes() {
@@ -23,7 +23,7 @@ function AppRoutes() {
       <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
       <Route path="/plans" element={<PrivateRoute><Plans /></PrivateRoute>} />
-      <Route path="/select-plan" element={<PrivateRoute><SelectPlan /></PrivateRoute>} />
+      <Route path="/plan/:id" element={<PrivateRoute><SelectPlan /></PrivateRoute>} />
       <Route path="/home" element={<PrivateRoute><Home /></PrivateRoute>} />
     </Routes>
   );

@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Plan from '../models/plan.model';
+
 export const createPlan = async (req: Request, res: Response) => {
   try {
     const newPlan = await Plan.create(req.body);
@@ -10,13 +12,19 @@ export const createPlan = async (req: Request, res: Response) => {
   }
 };
 
-export const searchPlansByName = async (req: Request, res: Response) => {
+export const searchPlansById = async (req: Request, res: Response) => {
   try {
-    const name = req.query.name as string;
-    const plans = await Plan.find({ name: { $regex: name, $options: 'i' } });
-    res.json(plans);
+    const planId = req.params.planId;
+    if (!mongoose.Types.ObjectId.isValid(planId)) {
+      return res.status(400).json({ error: 'Invalid plan ID' });
+    }
+    const plan = await Plan.findOne({ _id: planId });
+    if (!plan) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    res.json(plan);
   } catch (err) {
-    res.status(500).json({ error: 'Error searching plans', details: err });
+    res.status(500).json({ error: 'Error searching plan', details: err });
   }
 };
 

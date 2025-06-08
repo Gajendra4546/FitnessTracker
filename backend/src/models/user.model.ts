@@ -5,25 +5,25 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email:    { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  selectedPlan: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Plan',
-  },
-  progress: {
-    daysCompleted: { type: Number, default: 0 },
-    dailyLogs: [
-      {
-        date: String,
-        exercisesDone: [
-          {
+  selectedPlans: [
+  {
+    plan: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
+    progress: {
+      daysCompleted: { type: Number, default: 0 },
+      dailyLogs: [
+        {
+          date: String,
+          exercise: {
+            id: String,
             name: String,
             duration: Number,
             intensity: String,
-          }
-        ]
-      }
-    ]
-  }
+          },
+        },
+      ],
+    },
+  },
+],
 });
 
 userSchema.pre('save', async function (next) {
