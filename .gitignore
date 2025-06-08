@@ -1,0 +1,16 @@
+/dist
+/node_modules
+/logs
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+*.swp
+pids
+results
+tmp
+.env
+.DS_Store
+*.js.map
